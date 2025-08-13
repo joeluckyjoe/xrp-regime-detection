@@ -1,0 +1,12 @@
+# Virtual Environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# VS Code settings
+.vscode/
+
+# Data files - we will fetch this in Colab directly
+data/
