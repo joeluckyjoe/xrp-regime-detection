@@ -10,7 +10,7 @@ from arch import arch_model
 
 warnings.filterwarnings("ignore")
 
-# --- Your optimized parameters from the final run ---
+# --- Optimized parameters from your successful 6-month run ---
 OPTIMIZED_PARAMS = {
     "sl_multiplier": 3.0,
     "tp_multiplier": 5.0,
@@ -38,7 +38,8 @@ def fetch_historical_data(start_date_str, end_date_str, timeframe='5m', exchange
     df = pd.DataFrame(all_ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
     df.set_index('timestamp', inplace=True)
-    return df[start_date_str:end_date_str]
+    df = df.tz_localize('UTC')
+    return df[(df.index >= start_dt) & (df.index < end_dt)]
 
 def fetch_funding_rates(since, timeframe='5m', exchange_name='binanceusdm'):
     """Fetches historical funding rate data, looping to get all data."""
@@ -53,11 +54,12 @@ def fetch_funding_rates(since, timeframe='5m', exchange_name='binanceusdm'):
     df = pd.DataFrame(all_funding)
     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
     df = df.set_index('timestamp')['fundingRate'].astype(float)
+    df = df.tz_localize('UTC')
     return df.resample(timeframe).ffill()
 
 def run_full_system_backtest(data, sl_multiplier, tp_multiplier, short_window, long_window, rsi_oversold, rsi_overbought, funding_rate_threshold, transaction_cost=0.001):
     """
-    The full backtesting function with the complete simulation loop.
+    The full backtesting function that returns the DataFrame with signals.
     """
     log_volume = np.log(data['volume']).replace([np.inf, -np.inf], np.nan).dropna()
     scaler_gam = StandardScaler()
@@ -73,9 +75,9 @@ def run_full_system_backtest(data, sl_multiplier, tp_multiplier, short_window, l
 
     df['ma_200'] = df['close'].rolling(window=200).mean()
     df.ta.rsi(length=14, append=True)
-    df.ta.bbands(length=short_window, append=True, col_names=(f'BB_LOWER_{short_window}', f'BB_MIDDLE_{short_window}', f'BB_UPPER_{short_window}', 'BB_BANDWIDTH', 'BB_PERCENT'))
-    df.ta.ema(length=short_window, append=True, col_names=f'EMA_{short_window}')
-    df.ta.ema(length=long_window, append=True, col_names=f'EMA_{long_window}')
+    df.ta.bbands(length=int(short_window), append=True, col_names=(f'BB_LOWER_{int(short_window)}', f'BB_MIDDLE_{int(short_window)}', f'BB_UPPER_{int(short_window)}', 'BB_BANDWIDTH', 'BB_PERCENT'))
+    df.ta.ema(length=int(short_window), append=True, col_names=f'EMA_{int(short_window)}')
+    df.ta.ema(length=int(long_window), append=True, col_names=f'EMA_{int(long_window)}')
     df.ta.atr(length=14, append=True, col_names='ATR_14')
     df['log_returns'] = np.log(df['close'] / df['close'].shift(1))
     df.dropna(inplace=True)
@@ -89,36 +91,34 @@ def run_full_system_backtest(data, sl_multiplier, tp_multiplier, short_window, l
     take_profit_price = 0
     trade_log = []
     
+    df['bb_buy'] = False
+    df['bb_sell'] = False
+    df['ma_buy'] = False
+    df['ma_sell'] = False
+    
     for i in range(250, len(df)):
         current_row = df.iloc[i]
         prev_row = df.iloc[i-1]
         
         # Exit logic
-        if position == 1:
-            if current_row['low'] <= stop_loss_price:
-                exit_price = stop_loss_price
-                trade_pnl = (exit_price - entry_price) - (exit_price + entry_price) * transaction_cost
+        if position != 0:
+            exit_price = 0
+            trade_type = ''
+            if position == 1:
+                if current_row['low'] <= stop_loss_price:
+                    exit_price, trade_type = stop_loss_price, 'STOP-LOSS'
+                elif current_row['high'] >= take_profit_price:
+                    exit_price, trade_type = take_profit_price, 'TAKE-PROFIT'
+            elif position == -1:
+                if current_row['high'] >= stop_loss_price:
+                    exit_price, trade_type = stop_loss_price, 'STOP-LOSS'
+                elif current_row['low'] <= take_profit_price:
+                    exit_price, trade_type = take_profit_price, 'TAKE-PROFIT'
+            
+            if exit_price != 0:
+                trade_pnl = (exit_price - entry_price) * position - (abs(exit_price) + abs(entry_price)) * transaction_cost
                 pnl += trade_pnl
-                trade_log.append({'date': current_row.name, 'type': 'STOP-LOSS', 'price': exit_price, 'pnl': trade_pnl})
-                position = 0
-            elif current_row['high'] >= take_profit_price:
-                exit_price = take_profit_price
-                trade_pnl = (exit_price - entry_price) - (exit_price + entry_price) * transaction_cost
-                pnl += trade_pnl
-                trade_log.append({'date': current_row.name, 'type': 'TAKE-PROFIT', 'price': exit_price, 'pnl': trade_pnl})
-                position = 0
-        elif position == -1:
-            if current_row['high'] >= stop_loss_price:
-                exit_price = stop_loss_price
-                trade_pnl = (entry_price - exit_price) - (entry_price + exit_price) * transaction_cost
-                pnl += trade_pnl
-                trade_log.append({'date': current_row.name, 'type': 'STOP-LOSS', 'price': exit_price, 'pnl': trade_pnl})
-                position = 0
-            elif current_row['low'] <= take_profit_price:
-                exit_price = take_profit_price
-                trade_pnl = (entry_price - exit_price) - (entry_price + exit_price) * transaction_cost
-                pnl += trade_pnl
-                trade_log.append({'date': current_row.name, 'type': 'TAKE-PROFIT', 'price': exit_price, 'pnl': trade_pnl})
+                trade_log.append({'date': current_row.name, 'type': trade_type, 'price': exit_price, 'pnl': trade_pnl})
                 position = 0
         
         # Entry logic
@@ -126,36 +126,22 @@ def run_full_system_backtest(data, sl_multiplier, tp_multiplier, short_window, l
             current_funding_rate = current_row.get('fundingRate')
             if pd.notna(current_funding_rate):
                 signal_generated = False
-                
-                if current_row['regime'] == 'low_volatility':
-                    if (current_row['close'] < current_row[f'BB_LOWER_{short_window}'] and 
-                        current_row['close'] > current_row['ma_200'] and 
-                        current_row['RSI_14'] < rsi_oversold and
-                        current_funding_rate < funding_rate_threshold):
-                        position = 1
-                        signal_generated = True
-                    elif (current_row['close'] > current_row[f'BB_UPPER_{short_window}'] and
-                          current_row['close'] < current_row['ma_200'] and 
-                          current_row['RSI_14'] > rsi_overbought and
-                          current_funding_rate > -funding_rate_threshold):
-                        position = -1
-                        signal_generated = True
-                
-                elif current_row['regime'] == 'high_volatility':
-                    if (prev_row[f'EMA_{short_window}'] < prev_row[f'EMA_{long_window}'] and 
-                        current_row[f'EMA_{short_window}'] > current_row[f'EMA_{long_window}'] and
-                        current_row['close'] > current_row['ma_200'] and
-                        current_row['ATR_14'] > atr_threshold.iloc[i] and
-                        current_funding_rate < funding_rate_threshold):
-                        position = 1
-                        signal_generated = True
-                    elif (prev_row[f'EMA_{short_window}'] > prev_row[f'EMA_{long_window}'] and 
-                          current_row[f'EMA_{short_window}'] < current_row[f'EMA_{long_window}'] and
-                          current_row['close'] < current_row['ma_200'] and
-                          current_row['ATR_14'] > atr_threshold.iloc[i] and
-                          current_funding_rate > -funding_rate_threshold):
-                        position = -1
-                        signal_generated = True
+                current_atr_threshold = atr_threshold.get(current_row.name)
+                if pd.notna(current_atr_threshold):
+                    if current_row['regime'] == 'low_volatility':
+                        if (current_row['close'] < current_row[f'BB_LOWER_{int(short_window)}'] and current_row['close'] > current_row['ma_200'] and current_row['RSI_14'] < rsi_oversold and current_funding_rate < funding_rate_threshold):
+                            position, signal_generated = 1, True
+                            df.loc[current_row.name, 'bb_buy'] = True
+                        elif (current_row['close'] > current_row[f'BB_UPPER_{int(short_window)}'] and current_row['close'] < current_row['ma_200'] and current_row['RSI_14'] > rsi_overbought and current_funding_rate > -funding_rate_threshold):
+                            position, signal_generated = -1, True
+                            df.loc[current_row.name, 'bb_sell'] = True
+                    elif current_row['regime'] == 'high_volatility':
+                        if (prev_row[f'EMA_{int(short_window)}'] < prev_row[f'EMA_{int(long_window)}'] and current_row[f'EMA_{int(short_window)}'] > current_row[f'EMA_{int(long_window)}'] and current_row['close'] > current_row['ma_200'] and current_row['ATR_14'] > current_atr_threshold and current_funding_rate < funding_rate_threshold):
+                            position, signal_generated = 1, True
+                            df.loc[current_row.name, 'ma_buy'] = True
+                        elif (prev_row[f'EMA_{int(short_window)}'] > prev_row[f'EMA_{int(long_window)}'] and current_row[f'EMA_{int(short_window)}'] < current_row[f'EMA_{long_window}'] and current_row['close'] < current_row['ma_200'] and current_row['ATR_14'] > current_atr_threshold and current_funding_rate > -funding_rate_threshold):
+                            position, signal_generated = -1, True
+                            df.loc[current_row.name, 'ma_sell'] = True
                 
                 if signal_generated:
                     entry_price = current_row['open']
@@ -163,20 +149,18 @@ def run_full_system_backtest(data, sl_multiplier, tp_multiplier, short_window, l
                     garch_model = arch_model(garch_returns, vol='Garch', p=1, q=1).fit(disp='off')
                     forecast = garch_model.forecast(horizon=1)
                     estimated_sigma = np.sqrt(forecast.variance.iloc[-1, 0]) / 100
-                    
                     stop_loss_pct = estimated_sigma * sl_multiplier
                     take_profit_pct = estimated_sigma * tp_multiplier
-                    
                     if position == 1:
                         stop_loss_price = entry_price * (1 - stop_loss_pct)
                         take_profit_price = entry_price * (1 + take_profit_pct)
                         trade_log.append({'date': current_row.name, 'type': 'BUY', 'price': entry_price, 'pnl': np.nan})
-                    else: # position == -1
+                    else:
                         stop_loss_price = entry_price * (1 + stop_loss_pct)
                         take_profit_price = entry_price * (1 - take_profit_pct)
                         trade_log.append({'date': current_row.name, 'type': 'SELL', 'price': entry_price, 'pnl': np.nan})
 
-    return pnl, pd.DataFrame(trade_log)
+    return pnl, pd.DataFrame(trade_log), df
 
 if __name__ == '__main__':
     start_date = '2024-08-20'
@@ -184,13 +168,19 @@ if __name__ == '__main__':
 
     print(f"Fetching unseen historical data for validation ({start_date} to {end_date})...")
     validation_data = fetch_historical_data(start_date_str=start_date, end_date_str=end_date)
-    
-    print("Fetching funding rate data for the validation period...")
+    print("Fetching funding rate data...")
     funding_rates = fetch_funding_rates(since=validation_data.index[0], timeframe='5m')
-    validation_data = validation_data.join(funding_rates)
     
-    print("\nRunning validation backtest with optimized parameters...")
-    total_pnl, trades = run_full_system_backtest(
+    validation_data = pd.merge_asof(
+        left=validation_data.sort_index(),
+        right=funding_rates.sort_index(),
+        left_index=True,
+        right_index=True,
+        direction='forward'
+    )
+    
+    print("\nRunning final validation backtest...")
+    total_pnl, trades, backtest_df = run_full_system_backtest(
         validation_data,
         sl_multiplier=OPTIMIZED_PARAMS['sl_multiplier'],
         tp_multiplier=OPTIMIZED_PARAMS['tp_multiplier'],
@@ -201,10 +191,14 @@ if __name__ == '__main__':
         funding_rate_threshold=OPTIMIZED_PARAMS['funding_rate_threshold']
     )
     
+    # Save the full results DataFrame for plotting in the notebook
+    backtest_df.to_csv('data/validation_plot_data.csv')
+    print("\nFull backtest data saved to 'data/validation_plot_data.csv'")
+
     print("\n" + "="*50)
-    print("           VALIDATION BACKTEST RESULTS")
+    print("           FINAL VALIDATION RESULTS")
     print("="*50)
-    print(f"Period Analyzed:     {validation_data.index[0]} to {validation_data.index[-1]}")
+    print(f"Period Analyzed:     {backtest_df.index.min()} to {backtest_df.index.max()}")
     if not trades.empty:
         closed_trades = trades[trades['pnl'].notna()]
         print(f"Total Trades Taken:  {len(closed_trades)}")
