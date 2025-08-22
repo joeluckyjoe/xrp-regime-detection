@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 TRADING_CONFIG = {"total_capital_usd": 10000, "risk_per_trade_pct": 0.01}
 STATE_FILE = "data/last_signal.txt"
 OUTPUT_DIR = "signals"
+TRADE_LOG_FILE = "data/live_trade_log.csv"
 
 def create_signal_report(data, signal_data, params):
     """Generates a chart and saves a detailed HTML report."""
@@ -97,7 +98,14 @@ if __name__ == "__main__":
             if new_signal != "HOLD" and new_signal != last_signal:
                 print(f"!!! NEW SIGNAL DETECTED: {new_signal} !!!")
                 create_signal_report(live_data, signal_data, params)
+                
+                # --- THIS LINE IS NOW RESTORED ---
+                # Log the trade for the monitor to analyze later
+                with open(TRADE_LOG_FILE, 'a') as log_file:
+                    log_file.write(f"{datetime.now(timezone.utc).isoformat()},{new_signal},{signal_data['signal_price']}\n")
+                
                 save_last_signal(new_signal)
+                
             elif new_signal == "HOLD":
                 save_last_signal("HOLD")
         except Exception as e:

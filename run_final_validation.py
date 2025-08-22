@@ -12,13 +12,13 @@ warnings.filterwarnings("ignore")
 
 # --- Optimized parameters from your successful 6-month run ---
 OPTIMIZED_PARAMS = {
-    "sl_multiplier": 3.0,
+    "sl_multiplier": 1.0,
     "tp_multiplier": 5.0,
-    "short_window": 12,
-    "long_window": 80,
+    "short_window": 10,
+    "long_window": 57,
     "rsi_oversold": 20,
-    "rsi_overbought": 76,
-    "funding_rate_threshold": 0.0001
+    "rsi_overbought": 74,
+    "funding_rate_threshold": 0.001
 }
 
 def fetch_historical_data(start_date_str, end_date_str, timeframe='5m', exchange_name='binance'):
