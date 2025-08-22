@@ -1,9 +1,9 @@
 {
-    "sl_multiplier": 2.263926433666364,
+    "sl_multiplier": 3.0,
     "tp_multiplier": 5.0,
-    "short_window": 10,
-    "long_window": 47,
+    "short_window": 12,
+    "long_window": 80,
     "rsi_oversold": 20,
-    "rsi_overbought": 79,
+    "rsi_overbought": 76,
     "funding_rate_threshold": 0.0001
 }

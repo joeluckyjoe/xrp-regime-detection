@@ -57,7 +57,7 @@ def fetch_funding_rates(since, timeframe='5m', exchange_name='binanceusdm'):
     df = df.tz_localize('UTC')
     return df.resample(timeframe).ffill()
 
-def run_full_system_backtest(data, sl_multiplier, tp_multiplier, short_window, long_window, rsi_oversold, rsi_overbought, funding_rate_threshold, transaction_cost=0.001):
+def run_full_system_backtest(data, sl_multiplier, tp_multiplier, short_window, long_window, rsi_oversold, rsi_overbought, funding_rate_threshold, transaction_cost=0.00040):
     """
     The full backtesting function that returns the DataFrame with signals.
     """
