@@ -1,0 +1,9 @@
+{
+    "sl_multiplier": 3.3713784729000738,
+    "tp_multiplier": 6.987727365776614,
+    "short_window": 44,
+    "long_window": 177,
+    "rsi_oversold": 32,
+    "rsi_overbought": 68,
+    "vix_complacency_threshold": 21
+}
