@@ -101,7 +101,6 @@ def test_agent_on_window(policy_net, test_df, test_features, initial_balance, pa
     return pd.DataFrame(results_log)
 
 def run_walk_forward_analysis(full_df, all_features, num_episodes, params):
-    # Original hourly window sizes
     train_window_size, test_window_size = 63 * 7, 21 * 7
     initial_balance, current_balance = 100000, 100000
     all_results_df = []
@@ -109,18 +108,15 @@ def run_walk_forward_analysis(full_df, all_features, num_episodes, params):
     print(f"\n--- Starting Walk-Forward Backtest ({num_windows} windows) ---")
 
     for i in tqdm(range(num_windows)):
-        # Define all indices first
         train_start_idx = i * test_window_size
         train_end_idx = train_start_idx + train_window_size
         test_start_idx = train_end_idx
         test_end_idx = test_start_idx + test_window_size
 
-        # CORRECTED: Now perform the boundary check *after* test_end_idx is defined
         if test_end_idx > len(all_features):
             print(f"\nSkipping final window as it is incomplete.")
             break
 
-        # Slice data now that indices are validated
         train_df_slice = full_df.iloc[train_start_idx:train_end_idx]
         train_features_slice = all_features[train_start_idx:train_end_idx]
         test_df_slice = full_df.iloc[test_start_idx:test_end_idx]
@@ -145,44 +141,34 @@ def run_walk_forward_analysis(full_df, all_features, num_episodes, params):
     return pd.concat([start_row, final_results]).set_index('Timestamp')
 
 if __name__ == '__main__':
-    # --- Define the Parameter Sets for Sensitivity Analysis ---
-    V11_CHAMPION = { 'trade_penalty': 0.0954, 'trend_reward_bonus': 0.0376, 'stop_loss_atr_multiplier': 1.50 }
-
-    sensitivity_params = {
-        "Champion": V11_CHAMPION,
-        "Penalty -10%": {**V11_CHAMPION, 'trade_penalty': 0.085},
-        "Penalty +10%": {**V11_CHAMPION, 'trade_penalty': 0.105},
-        "Bonus -10%": {**V11_CHAMPION, 'trend_reward_bonus': 0.033},
-        "Bonus +10%": {**V11_CHAMPION, 'trend_reward_bonus': 0.041},
-        "Stop-Loss -10%": {**V11_CHAMPION, 'stop_loss_atr_multiplier': 1.35},
-        "Stop-Loss +10%": {**V11_CHAMPION, 'stop_loss_atr_multiplier': 1.65},
+    # --- Parameters for the v12 Champion Agent ---
+    V12_PARAMS = {
+        'trade_penalty': 0.0954,
+        'trend_reward_bonus': 0.041,
+        'stop_loss_atr_multiplier': 1.50
     }
-
-    print("--- INITIATING ROBUSTNESS TEST 3: PARAMETER SENSITIVITY ANALYSIS ---")
-    print("Loading recent hourly historical data for QQQ...")
+      
+    print("Loading all historical data for QQQ...")
     full_data_df = fetch_and_prepare_data(ticker="QQQ", period="729d", interval="1h")
-
+    
     if full_data_df is not None:
         feature_window_size = 441
-        print("Calculating walk-forward features (this will only be done once)...")
         all_features = calculate_walk_forward_features(full_data_df)
         aligned_df = full_data_df.iloc[feature_window_size:]
-
-        results_summary = {}
-
-        for name, params in sensitivity_params.items():
-            print(f"\n\n{'='*20} RUNNING BACKTEST FOR: {name.upper()} {'='*20}")
-            # We pass the already calculated features to avoid recalculating them each time
-            results_df = run_walk_forward_analysis(aligned_df, all_features, num_episodes=150, params=params)
-            
-            if not results_df.empty:
-                initial_value = results_df['PortfolioValue'].iloc[0]
-                final_value = results_df['PortfolioValue'].iloc[-1]
-                percent_return = ((final_value / initial_value) - 1) * 100
-                results_summary[name] = (final_value, percent_return)
-                print(f"  ==> Final Value for {name}: ${final_value:,.2f} ({percent_return:+.2f}%)")
-
-        print("\n\n--- SENSITIVITY ANALYSIS COMPLETE ---")
-        print("Final Portfolio Value Summary:")
-        for name, (value, ret) in results_summary.items():
-            print(f"  - {name}: ${value:,.2f} ({ret:+.2f}%)")
+          
+        results_df = run_walk_forward_analysis(aligned_df, all_features, num_episodes=150, params=V12_PARAMS)
+              
+        if not results_df.empty:
+            print("\nSaving the v12 equity curve plot to 'equity_curve_vs_asset_v12.png'...")
+            plt.figure(figsize=(14, 7))
+            normalized_portfolio = (results_df['PortfolioValue'] / results_df['PortfolioValue'].iloc[0]) * 100
+            normalized_asset = (results_df['AssetPrice'] / results_df['AssetPrice'].iloc[0]) * 100
+            plt.plot(normalized_portfolio, label='Agent Equity Curve (v12)', color='lime')
+            plt.plot(normalized_asset, label='QQQ Asset Price (Buy & Hold)', color='gray', linestyle='--')
+            plt.title("v12 Champion Agent Performance vs. Buy & Hold")
+            plt.xlabel("Date"); plt.ylabel("Normalized Value (Start = 100)")
+            plt.grid(True, which='both', linestyle='--', linewidth=0.5); plt.legend(); plt.tight_layout()
+            plt.savefig('equity_curve_vs_asset_v12.png')
+            print("Plot saved successfully.")
+            final_value = results_df['PortfolioValue'].iloc[-1]
+            print(f"Final Portfolio Value: ${final_value:,.2f}")

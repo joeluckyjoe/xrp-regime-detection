@@ -198,7 +198,6 @@ class TradingEnvironment(gym.Env):
             negative_returns = relevant_returns[relevant_returns < 0]
             downside_deviation = np.std(negative_returns) if len(negative_returns) > 1 else 0
             if downside_deviation != 0:
-                # Original hourly annualization factor
                 sortino_ratio = mean_return / downside_deviation * np.sqrt(252 * 7)
                 reward = np.tanh(sortino_ratio)
             elif mean_return > 0: reward = 1.0
