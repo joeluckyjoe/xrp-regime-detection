@@ -7,16 +7,18 @@ from skopt.utils import use_named_args
 
 from specialist_run_backtest import fetch_and_prepare_data, calculate_walk_forward_features, run_walk_forward_analysis, set_seeds
 
+# v21: Adjusted the search space for the Sideways specialist's learning rate
+# based on the insight from the v20 optimization log.
 SEARCH_SPACE = [
     Real(low=1e-5, high=1e-3, prior='log-uniform', name='lr_bull'),
     Real(low=0.0, high=0.1, name='entropy_coef_bull'),
     Real(low=1e-5, high=1e-3, prior='log-uniform', name='lr_bear'),
     Real(low=0.0, high=0.1, name='entropy_coef_bear'),
-    Real(low=1e-5, high=1e-3, prior='log-uniform', name='lr_sideways'),
+    Real(low=1e-6, high=1e-4, prior='log-uniform', name='lr_sideways'), # <-- This line is changed
     Real(low=0.0, high=0.1, name='entropy_coef_sideways')
 ]
-LOG_FILE = 'optimization_log_specialist_v20.csv'
-CHART_DIR = "optimization_charts_v20"
+LOG_FILE = 'optimization_log_specialist_v21_calmar.csv'
+CHART_DIR = "optimization_charts_v21_calmar"
 SEED = 42
 
 print("Loading and preparing all historical data for the optimization run...")
@@ -59,7 +61,7 @@ def objective_function(lr_bull, entropy_coef_bull, lr_bear, entropy_coef_bear, l
 
 if __name__ == '__main__':
     os.makedirs(CHART_DIR, exist_ok=True)
-    print("\n--- Bayesian Optimization for Specialist Champions v20 ---")
+    print("\n--- Bayesian Optimization for Specialist Champions v21 (Calmar) ---")
     if not os.path.exists(LOG_FILE):
         print("Log file not found. Starting a new optimization.")
         with open(LOG_FILE, 'w') as f:
@@ -77,7 +79,7 @@ if __name__ == '__main__':
             print("Log file is empty. Starting a new optimization."); x0, y0 = None, None
     N_CALLS = 50
     optimizer_kwargs = {"func": objective_function, "dimensions": SEARCH_SPACE, "n_calls": N_CALLS, "random_state": 123}
-    if x0: optimizer_kwargs['x0'], optimizer_kwargs['y0'] = x0, y0
+    if x0 and y0: optimizer_kwargs['x0'], optimizer_kwargs['y0'] = x0, y0
     result = gp_minimize(**optimizer_kwargs)
     print("\n--- Optimization Complete ---")
     print(f"Best parameters found:")

@@ -1,0 +1,13 @@
+--- v21 Ground Truth Regime Log ---
+Window 1: Discovered 4 regimes. Dominant: NEUTRAL_2.
+Window 2: Discovered 3 regimes. Dominant: NEUTRAL_1.
+Window 3: Discovered 6 regimes. Dominant: BEAR.
+Window 4: Discovered 4 regimes. Dominant: BEAR.
+Window 5: Discovered 4 regimes. Dominant: NEUTRAL_2.
+Window 6: Discovered 4 regimes. Dominant: NEUTRAL_2.
+Window 7: Discovered 3 regimes. Dominant: BULL.
+Window 8: Discovered 4 regimes. Dominant: BULL.
+Window 9: Discovered 4 regimes. Dominant: BEAR.
+Window 10: Discovered 4 regimes. Dominant: BEAR.
+Window 11: Discovered 4 regimes. Dominant: BEAR.
+Window 12: Discovered 4 regimes. Dominant: NEUTRAL_1.

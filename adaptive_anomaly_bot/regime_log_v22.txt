@@ -1,0 +1,5 @@
+--- v22 'Reference Brain' Regime Log ---
+Window 1: Dominant Regime = BEAR.
+Window 2: Dominant Regime = BEAR.
+Window 3: Dominant Regime = NEUTRAL_1.
+Window 4: Dominant Regime = BEAR.
