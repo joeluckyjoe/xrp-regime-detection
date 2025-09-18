@@ -291,7 +291,7 @@ SEARCH_SPACE = [
     Real(low=0.0, high=0.1, name='entropy_coef_sideways')
 ]
 OPTIMIZATION_SEEDS = [42, 43, 44]
-ASSET_TICKER = "QQQ" # <--- CHANGE THIS FOR EACH ASSET
+ASSET_TICKER = "GLD" # <--- CHANGE THIS FOR EACH ASSET
 LOG_FILE_BASE = 'robust_optimization_log'
 N_CALLS = 50
 

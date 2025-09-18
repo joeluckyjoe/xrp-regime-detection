@@ -55,7 +55,7 @@ def analyze_and_plot(log_filename="robust_optimization_log_TLT_LCB.csv"):
         ax.legend()
         fig.tight_layout()
 
-        plot_filename = 'optimization_analysis_plot.png'
+        plot_filename = 'optimization_analysis_plot_GLD.png'
         plt.savefig(plot_filename)
         print(f"\nPlot saved successfully as '{plot_filename}'")
         
@@ -70,4 +70,4 @@ def analyze_and_plot(log_filename="robust_optimization_log_TLT_LCB.csv"):
 
 if __name__ == '__main__':
     # You can change the filename here if you are analyzing a different asset log
-    analyze_and_plot(log_filename="robust_optimization_log_QQQ_FINAL.csv")
+    analyze_and_plot(log_filename="robust_optimization_log_GLD_FINAL.csv")
