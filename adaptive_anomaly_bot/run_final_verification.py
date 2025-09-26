@@ -21,7 +21,7 @@ import pandas_ta as ta
 warnings.filterwarnings("ignore")
 
 # --- VERSION CUE ---
-SCRIPT_VERSION = "Portfolio Backtester v3.1 (Rolling Supervised ATR) - FINAL"
+SCRIPT_VERSION = "Portfolio Backtester v5.0 (ATR Supervised) - DEFINITIVE"
 
 def set_seeds(seed_value=42):
     random.seed(seed_value)
@@ -342,6 +342,7 @@ if __name__ == '__main__':
     TOTAL_TRAINING_STEPS_PER_WINDOW = 50000
     VERIFICATION_SEEDS = range(101, 111)
     
+    # The definitive, robustly optimized hyperparameters for the ATR Supervised Agent
     CHAMPION_PARAMS = {
         "QQQ": {'BULL':{'lr':0.000070,'entropy_coef':0.0484},'BEAR':{'lr':0.000019,'entropy_coef':0.0007},'SIDEWAYS':{'lr':0.000012,'entropy_coef':0.0562}},
         "GLD": {'BULL':{'lr':0.001000,'entropy_coef':0.0000},'BEAR':{'lr':0.000010,'entropy_coef':0.0000},'SIDEWAYS':{'lr':0.000100,'entropy_coef':0.0000}},
@@ -375,7 +376,7 @@ if __name__ == '__main__':
         mean_perf, std_perf, min_perf, max_perf = np.mean(final_values), np.std(final_values), np.min(final_values), np.max(final_values)
         print("\n\n--- FINAL PORTFOLIO 10-SEED VERIFICATION REPORT ---")
         print(f"Portfolio: {', '.join(PORTFOLIO)}")
-        print(f"Regime Detector: Heuristic (Momentum + Volatility)")
+        print(f"Regime Detector: {SCRIPT_VERSION}")
         print("-" * 50)
         print(f"Mean Final Value:      ${mean_perf:,.2f}")
         print(f"Standard Deviation:    ${std_perf:,.2f}")

@@ -1,0 +1,19 @@
+--- Loading Data and Trained Agent for Debugging ---
+--- Running Backtest Simulation with Debug Logging ---
+
+--- Breakout Signal at 1746 ---
+  Agent Action Probs: [Hold: 23.98%, Long: 33.33%, Short: 42.70%]
+  Agent Decision: SHORT
+  >> Entering SHORT trade #1 at price 446.98
+  << Exiting trade #1 at 1779 | Price: 446.26 | PnL: $-100.16
+
+--- Breakout Signal at 2907 ---
+  Agent Action Probs: [Hold: 19.19%, Long: 13.15%, Short: 67.66%]
+  Agent Decision: SHORT
+  >> Entering SHORT trade #2 at price 456.37
+  << Exiting trade #2 at 3022 | Price: 466.37 | PnL: $-97.87
+
+--- Backtest Complete. Calculating Performance... ---
+
+✅ Debug backtest complete. Performance chart saved to backtest_performance_v2_debug.png
+Log file saved to backtest_log.txt
